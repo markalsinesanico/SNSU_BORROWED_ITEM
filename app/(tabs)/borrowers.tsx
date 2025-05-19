@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Alert, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -28,6 +28,7 @@ export default function BorrowersScreen() {
   const router = useRouter();
   const [borrowers, setBorrowers] = useState<BorrowerItem[]>([]);
   const [itemImages, setItemImages] = useState<{[key: string]: string}>({});
+  const [searchQuery, setSearchQuery] = useState('');
 
   useFocusEffect(
     React.useCallback(() => {
@@ -128,57 +129,92 @@ export default function BorrowersScreen() {
     }
   };
 
+  const filteredBorrowers = borrowers.filter(borrower => {
+    const searchLower = searchQuery.toLowerCase();
+    const matchesSearch = borrower.studentName.toLowerCase().includes(searchLower) ||
+      borrower.studentId.toLowerCase().includes(searchLower);
+    
+    // Only show items that are not returned
+    return matchesSearch && borrower.status !== 'Returned';
+  });
+
   return (
     <SafeAreaView style={styles.container}>
       <LinearGradient colors={['#28a745', '#FFD700']} style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Borrowers List</Text>
-        {/* Add this button for testing */}
+        <Text style={styles.headerTitle}>Active Borrowers</Text>
         <TouchableOpacity onPress={clearBorrowers} style={styles.clearButton}>
           <Ionicons name="trash" size={24} color="#fff" />
         </TouchableOpacity>
       </LinearGradient>
 
+      <View style={styles.searchContainer}>
+        <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search active borrowers..."
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          placeholderTextColor="#666"
+        />
+        {searchQuery.length > 0 && (
+          <TouchableOpacity 
+            style={styles.clearSearchButton}
+            onPress={() => setSearchQuery('')}
+          >
+            <Ionicons name="close-circle" size={20} color="#666" />
+          </TouchableOpacity>
+        )}
+      </View>
+
       <ScrollView style={styles.content}>
-        {borrowers.map((borrower) => (
-          <View key={borrower.id} style={styles.borrowerCard}>
-            <Image 
-              source={{ 
-                uri: borrower.imageUrl || itemImages[borrower.itemId] || 'https://via.placeholder.com/150'
-              }} 
-            />
-            <View style={styles.borrowerInfo}>
-              <Text style={styles.studentName}>{borrower.studentName}</Text>
-              <Text style={styles.studentId}>ID: {borrower.studentId}</Text>
-              <Text style={styles.itemName}>Item: {borrower.itemName}</Text>
-              <Text style={styles.courseInfo}>
-                {borrower.department} - {borrower.course}
-              </Text>
-              <View style={styles.dateContainer}>
-                <Text style={styles.dateText}>Borrowed: {borrower.borrowDate}</Text>
-                <Text style={styles.dateText}>Return: {borrower.returnDate}</Text>
-              </View>
-              <Text style={styles.instructorText}>
-                Instructor: {borrower.instructor}
-              </Text>
-              <View style={styles.statusContainer}>
-                <View style={[styles.statusBadge, { backgroundColor: getStatusColor(borrower.status) }]}>
-                  <Text style={styles.statusText}>{borrower.status}</Text>
+        {filteredBorrowers.length === 0 ? (
+          <Text style={styles.emptyMessage}>
+            {searchQuery.trim() !== "" 
+              ? "No matching active borrowers found."
+              : "No active borrowers at the moment."}
+          </Text>
+        ) : (
+          filteredBorrowers.map((borrower) => (
+            <View key={borrower.id} style={styles.borrowerCard}>
+              <Image 
+                source={{ 
+                  uri: borrower.imageUrl || itemImages[borrower.itemId] || 'https://via.placeholder.com/150'
+                }} 
+              />
+              <View style={styles.borrowerInfo}>
+                <Text style={styles.studentName}>{borrower.studentName}</Text>
+                <Text style={styles.studentId}>ID: {borrower.studentId}</Text>
+                <Text style={styles.itemName}>Item: {borrower.itemName}</Text>
+                <Text style={styles.courseInfo}>
+                  {borrower.department} - {borrower.course}
+                </Text>
+                <View style={styles.dateContainer}>
+                  <Text style={styles.dateText}>Borrowed: {borrower.borrowDate}</Text>
+                  <Text style={styles.dateText}>Return: {borrower.returnDate}</Text>
                 </View>
-                {borrower.status === 'Borrowed' && (
-                  <TouchableOpacity 
-                    style={styles.returnButton}
-                    onPress={() => handleReturn(borrower.id)}
-                  >
-                    <Text style={styles.returnButtonText}>Mark as Returned</Text>
-                  </TouchableOpacity>
-                )}
+                <Text style={styles.instructorText}>
+                  Instructor: {borrower.instructor}
+                </Text>
+                <View style={styles.statusContainer}>
+                  <View style={[styles.statusBadge, { backgroundColor: getStatusColor(borrower.status) }]}>
+                    <Text style={styles.statusText}>{borrower.status}</Text>
+                  </View>
+                  {borrower.status === 'Borrowed' && (
+                    <TouchableOpacity 
+                      style={styles.returnButton}
+                      onPress={() => handleReturn(borrower.id)}
+                    >
+                      <Text style={styles.returnButtonText}>Mark as Returned</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
               </View>
             </View>
-          </View>
-        ))}
+          ))
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -295,5 +331,34 @@ const styles = StyleSheet.create({
     padding: 8,
     position: 'absolute',
     right: 15,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    margin: 15,
+    paddingHorizontal: 15,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    height: 45,
+  },
+  searchIcon: {
+    marginRight: 10,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    color: '#333',
+  },
+  clearSearchButton: {
+    padding: 5,
+  },
+  emptyMessage: {
+    textAlign: 'center',
+    marginTop: 20,
+    fontSize: 16,
+    color: '#666',
+    fontStyle: 'italic',
   },
 }); 

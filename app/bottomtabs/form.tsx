@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { View, Text, TextInput, Button, StyleSheet, Alert, ScrollView } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import RNPickerSelect from 'react-native-picker-select';
@@ -18,6 +18,45 @@ interface FormData {
 
 const BORROWERS_STORAGE_KEY = '@borrowers_list';
 
+const courseOptions = {
+  CEIT: [
+    { label: "Bachelor of Science in Electronics(BSECE)", value: "BSECE" },
+    { label: "Bachelor of Science in Electrical(BSEE)", value: "BSEE" },
+    { label: "Bachelor of Science in Computer(BSCoE)", value: "BSCoE" },
+    { label: "Bachelor of Science in (BSIS)", value: "BSIS" },
+    { label: "Bachelor of Science in (BSInfoTech)", value: "BSInfoTech" },
+    { label: "Bachelor of Science in (BSCS)", value: "BSCS" },
+  ],
+  CTE: [
+    { label: "BSED - English", value: "BSED-ENGLISH" },
+    { label: "BSED - Filipino", value: "BSED-FILIPINO" },
+    { label: "BSED - Mathematics", value: "BSED-MATH" },
+    { label: "BSED - Sciences", value: "BSED-SCIENCES" },
+    { label: "BEED", value: "BEED" },
+    { label: "BPED", value: "BPED" },
+    { label: "BTVTED", value: "BTVTED" },
+  ],
+  COT: [
+    { label: "Bachelor in Electrical (BEET)", value: "BEET" },
+    { label: "Bachelor in Electronics (BEXET)", value: "BEXET" },
+    { label: "Bachelor in Mechanical (BMET)", value: "BMET" },
+    { label: "Mechanical Technology (BMET‑MT)", value: "BMET-MT" },
+    { label: "Refrigeration & (BMET‑RAC)", value: "BMET-RAC" },
+    { label: "Architectural Drafting (BSIT‑ADT)", value: "BSIT-ADT" },
+    { label: "Automotive Technology (BSIT‑AT)", value: "BSIT-AT" },
+    { label: "Electrical Technology (BSIT‑ELT)", value: "BSIT-ELT" },
+    { label: "Electronics Technology (BSIT‑ET)", value: "BSIT-ET" },
+    { label: "Mechanical Technology (BSIT‑MT)", value: "BSIT-MT" },
+    { label: "Welding & Fabrication (BSIT‑WAF)", value: "BSIT-WAF" },
+    { label: "Heating, Ventilation, (BSIT‑HVACR)", value: "BSIT-HVACR" },
+  ],
+  CAS: [
+    { label: "Bachelor of Science in(BSES)", value: "BSES" },
+    { label: "Bachelor of Science in (BSMATH)", value: "BSMATH" },
+    { label: "Bachelor of Arts in (BA‑EL)", value: "BA-EL" },
+  ],
+};
+
 const BorrowForm = () => {
   const router = useRouter();
   const params = useLocalSearchParams();
@@ -33,6 +72,16 @@ const BorrowForm = () => {
     timeOut: "",
     instructor: "",
   });
+
+  const [availableCourses, setAvailableCourses] = useState<Array<{label: string, value: string}>>([]);
+
+  useEffect(() => {
+    if (form.department) {
+      setAvailableCourses(courseOptions[form.department as keyof typeof courseOptions] || []);
+      // Reset course when department changes
+      setForm(prev => ({ ...prev, course: "" }));
+    }
+  }, [form.department]);
 
   const handleChange = (key: keyof FormData, value: string) => {
     setForm({ ...form, [key]: value });
@@ -164,12 +213,16 @@ const BorrowForm = () => {
           placeholder={{ label: "Select Department", value: null }}
         />
 
-        <TextInput 
-          placeholder="Course" 
-          style={styles.input} 
+        <Text style={styles.label}>Course:</Text>
+        <RNPickerSelect
+          onValueChange={(value) => handleChange("course", value)}
+          items={availableCourses}
+          style={pickerSelectStyles}
           value={form.course}
-          onChangeText={(text) => handleChange("course", text)} 
+          placeholder={{ label: "Select Course", value: null }}
+          disabled={!form.department}
         />
+
         <TextInput 
           placeholder="Time In" 
           style={styles.input} 

@@ -8,6 +8,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  TextInput,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -35,10 +36,25 @@ export default function DepartmentDetails() {
   const department = params.department as string;
   const router = useRouter();
   const [records, setRecords] = useState<BorrowRecord[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filteredRecords, setFilteredRecords] = useState<BorrowRecord[]>([]);
 
   useEffect(() => {
     loadDepartmentRecords();
   }, [department]);
+
+  useEffect(() => {
+    if (searchQuery.trim() === "") {
+      setFilteredRecords(records);
+    } else {
+      const filtered = records.filter(
+        (record) =>
+          record.studentName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          record.studentId.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+      setFilteredRecords(filtered);
+    }
+  }, [searchQuery, records]);
 
   const loadDepartmentRecords = async () => {
     try {
@@ -83,13 +99,34 @@ export default function DepartmentDetails() {
         <Text style={styles.headerTitle}>{department} Department Details</Text>
       </View>
 
+      <View style={styles.searchContainer}>
+        <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search by name or ID..."
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          placeholderTextColor="#666"
+        />
+        {searchQuery.length > 0 && (
+          <TouchableOpacity 
+            style={styles.clearSearchButton}
+            onPress={() => setSearchQuery('')}
+          >
+            <Ionicons name="close-circle" size={20} color="#666" />
+          </TouchableOpacity>
+        )}
+      </View>
+
       <ScrollView style={styles.content}>
-        {records.length === 0 ? (
+        {filteredRecords.length === 0 ? (
           <Text style={styles.emptyMessage}>
-            No records found for the {department} Department.
+            {searchQuery.trim() !== "" 
+              ? "No matching records found."
+              : `No records found for the ${department} Department.`}
           </Text>
         ) : (
-          records.map((record) => (
+          filteredRecords.map((record) => (
             <View key={record.id} style={styles.recordCard}>
               <Text style={styles.studentName}>{record.studentName}</Text>
               <Text style={styles.studentId}>ID: {record.studentId}</Text>
@@ -183,6 +220,28 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     marginTop: 4,
     color: "#28a745",
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    margin: 15,
+    paddingHorizontal: 15,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    height: 45,
+  },
+  searchIcon: {
+    marginRight: 10,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    color: '#333',
+  },
+  clearSearchButton: {
+    padding: 5,
   },
 });
 
